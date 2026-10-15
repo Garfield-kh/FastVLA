@@ -1,0 +1,34 @@
+# FastVLA on LIBERO: settings of the released checkpoint.
+# Training: 1 GPU, batch 32, 30k steps, ~4 h.
+benchmark: libero
+data_dir: data/libero              # task*.npz + manifest.json + norm_stats.json (scripts/prepare_data.py)
+bank: banks/libero                 # scripts/build_bank.py (bf16 shards + rope_tables.pt)
+vlm: Dexmal/DM05-libero
+vlm_revision: 25a8e0d38a8eaeaae41a44d7b4a2378fd8ce1088
+
+# model
+backbone: facebook/dinov2-base
+d: 256
+nhead: 8
+n_dec: 4
+n_cache_heads: 8
+chunk: 10
+img_hw: [224, 224]
+hist_offsets: [0]                  # no history
+hist_cams: [0]
+norm_mode: quantile
+
+# optimisation
+steps: 30000
+batch: 32
+k: 4
+lr: 3.0e-4
+lr_dino_mult: 0.1
+warmup: 1000
+loss: l1
+clip: 1.0
+seed: 13
+workers: 8
+prefetch: 4
+bank_in_worker: false
+save_every: 5000

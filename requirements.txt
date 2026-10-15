@@ -1,0 +1,7 @@
+# Model environment. Install torch 2.11 (cu128) and opendm@e41e501 first, see README.
+numpy
+pyyaml
+safetensors
+pillow
+opencv-python-headless
+h5py

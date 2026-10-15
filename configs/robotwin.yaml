@@ -1,0 +1,36 @@
+# FastVLA on RoboTwin 2.0: settings of the released checkpoint.
+# Training: torchrun on 2 GPUs x batch 128 = effective batch 256, cosine schedule.
+# Keep batch x num_gpus = 256 if you use a different number of GPUs.
+benchmark: robotwin
+data_dir: data/robotwin            # index.json + norm_stats.json (scripts/prepare_data.py)
+instructions: assets/robotwin_instructions.json
+bank: banks/robotwin               # scripts/build_bank.py (fp8 shards + rope_tables.pt)
+vlm: Dexmal/DM05-robotwin2
+vlm_revision: bef09062f8d9744b7691d0a5db4e23834e46071e
+
+# model
+backbone: facebook/dinov2-base
+d: 256
+nhead: 8
+n_dec: 4
+n_cache_heads: 8
+chunk: 50
+img_tokens: 192                    # -> 168 x 224 images for DINOv2 (patch 14)
+hist_offsets: [-17, -8, 0]         # head camera at t-17, t-8 and t (control steps)
+hist_cams: [0]
+norm_mode: zscore
+
+# optimisation
+steps: 240000
+batch: 128                         # per GPU
+k: 8                               # episodes per batch (frames are grouped by episode)
+lr: 3.0e-4
+lr_dino_mult: 0.1
+warmup: 1000
+loss: l1
+clip: 1.0
+seed: 0
+workers: 3
+prefetch: 1
+bank_in_worker: true
+save_every: 10000

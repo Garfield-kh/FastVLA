@@ -1,0 +1,11 @@
+# Basic experiment configuration (filled in by eval.sh)
+policy_name: null
+task_name: null
+task_config: null
+ckpt_setting: null
+seed: null
+instruction_type: unseen
+
+# FastVLA policy server (scripts/serve.py)
+host: 127.0.0.1
+port: 8765
