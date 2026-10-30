@@ -54,4 +54,7 @@ On Ascend three attention kernels are swapped for equivalent ones:
 
 The installation check below passes on Ascend (`--device npu:0`, `max|diff|` = 3.9e-3).
 
+`scripts/build_bank.py` and `scripts/train.py` use the NPU automatically when `torch_npu` is
+installed (single-device training verified).
+
 To check an installation against the released checkpoints, see [Checking an installation](../README.md#checking-an-installation).

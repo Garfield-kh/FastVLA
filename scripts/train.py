@@ -22,6 +22,13 @@ import numpy as np
 import torch
 import yaml
 
+try:                                  # Ascend: registers the "npu" device type
+    import torch_npu  # noqa: F401
+    DEV_TYPE = "npu"
+except ImportError:
+    DEV_TYPE = "cuda"
+DEV_TYPE = os.environ.get("FASTVLA_DEVICE", DEV_TYPE)
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 from fastvla.aug import MILD, aug_views  # noqa: E402
@@ -66,10 +73,10 @@ def main():
     ddp = world > 1
     if ddp:
         import torch.distributed as dist
-        torch.cuda.set_device(local_rank)
-        dist.init_process_group("nccl")
+        getattr(torch, DEV_TYPE).set_device(local_rank)
+        dist.init_process_group("hccl" if DEV_TYPE == "npu" else "nccl")
     is_main = rank == 0
-    dev = f"cuda:{local_rank}" if ddp else "cuda"
+    dev = f"{DEV_TYPE}:{local_rank}" if ddp else DEV_TYPE
     os.makedirs(a.out, exist_ok=True)
     logf = open(os.path.join(a.out, "train.log"), "a") if is_main else None
 
@@ -195,7 +202,7 @@ def main():
         act = b["action"].to(dev, non_blocking=True)
         msk = b["action_mask"].to(dev, non_blocking=True)
         im = aug_views(b["imgs"].to(dev, non_blocking=True), model_cfg["cam_of_slot"], MILD)
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.autocast(DEV_TYPE, dtype=torch.bfloat16):
             pred = model(imgs=im, state=b["state"].to(dev, non_blocking=True),
                          role=b["role"].to(dev, non_blocking=True), **cache)
         loss = masked_l1(pred, act, msk)

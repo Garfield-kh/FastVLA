@@ -26,6 +26,13 @@ import time
 import torch
 import yaml
 
+try:                                  # Ascend: registers the "npu" device type
+    import torch_npu  # noqa: F401
+    DEV = "npu"
+except ImportError:
+    DEV = "cuda"
+DEV = os.environ.get("FASTVLA_DEVICE", DEV)
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 from fastvla.bank import fp8_quantize  # noqa: E402
@@ -64,7 +71,7 @@ def pad_length(dm05, proc, bench, ds, eps):
     """Common prefix length L of all shards: image/template overhead + longest instruction."""
     tok = proc.tokenizer
     i0, _, s0 = eps[0]
-    keys, _, _ = prefill(dm05, proc, bench, [s0], [ds.first_frame(i0)])
+    keys, _, _ = prefill(dm05, proc, bench, [s0], [ds.first_frame(i0)], device=DEV)
     overhead = keys[0].shape[2] - len(tok(build_prompt(bench, s0))["input_ids"])
     return overhead + max(len(tok(build_prompt(bench, s))["input_ids"]) for _, _, s in eps)
 
@@ -78,14 +85,14 @@ def build_shard(cfg, shard):
         return
     rope_path = os.path.join(out, "rope_tables.pt")
     if shard == 0 and not os.path.exists(rope_path):
-        dump_rope_tables(cfg["vlm"], rope_path, cfg["vlm_revision"])
-        torch.cuda.empty_cache()
+        dump_rope_tables(cfg["vlm"], rope_path, cfg["vlm_revision"], device=DEV)
+        getattr(torch, DEV).empty_cache()
 
     ds, eps = episodes(cfg)
     per = SHARD_EPS[bench]
     lo, hi = shard * per, min((shard + 1) * per, len(eps))
     assert lo < hi, f"shard {shard} is empty ({len(eps)} episodes)"
-    dm05, proc = load_vlm(cfg["vlm"], cfg["vlm_revision"])
+    dm05, proc = load_vlm(cfg["vlm"], cfg["vlm_revision"], device=DEV)
     L = pad_length(dm05, proc, bench, ds, eps)
     fp8 = bench == "robotwin"
     n = hi - lo
@@ -97,7 +104,7 @@ def build_shard(cfg, shard):
     for s in range(lo, hi, BATCH):
         sl = range(s, min(s + BATCH, hi))
         keys, values, meta = prefill(dm05, proc, bench, [eps[i][2] for i in sl],
-                                     [ds.first_frame(eps[i][0]) for i in sl])
+                                     [ds.first_frame(eps[i][0]) for i in sl], device=DEV)
         Lb = keys[0].shape[2]
         assert Lb <= L, f"prefix {Lb} longer than L={L}"
         blob = torch.stack([torch.stack([k, v], 1) for k, v in zip(keys, values)], 1)

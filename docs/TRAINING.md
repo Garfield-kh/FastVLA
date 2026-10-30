@@ -44,6 +44,9 @@ python scripts/train.py --config configs/libero.yaml --out runs/libero
 Checkpoints are saved every `save_every` steps in the release format and can be served
 directly. Config keys can be overridden with `--set key=value`.
 
+With `torch_npu` installed, `build_bank.py` and `train.py` run on Ascend NPUs without changes
+(see [INSTALL.md](INSTALL.md#ascend-npu)).
+
 ## Notes on data
 
 - **State and action on RoboTwin** are the same 14-D joint-target vector (as in DM0.5 and the
